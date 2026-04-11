@@ -7,7 +7,7 @@ import { compressCommand } from './commands/compress.js';
 import { reportCommand } from './commands/report.js';
 
 // Version injected at build time by tsup via package.json
-const VERSION = '0.1.0';
+const VERSION = '1.0.0';
 const DESCRIPTION = 'Reduce Claude Code token usage by up to 80%. Context analyzer, auto-optimizer, live dashboard, and smart MCP tools.';
 
 const program = new Command();

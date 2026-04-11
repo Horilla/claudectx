@@ -11,23 +11,21 @@
 
 <br />
 
-> **Note:** Live dashboard GIF coming in v0.3.0. Try `npx claudectx analyze` now — no API key needed.
-
 ---
 
 ## Why claudectx?
 
-A typical Claude Code session costs **$2–$15 in tokens**. Most of it is wasted.
+A typical Claude Code session costs **$2–$15 in tokens**. Most of it is wasted:
 
 | Problem | Impact | Fix |
 |---|---|---|
 | Bloated `CLAUDE.md` injected every request | 6,000–14,000 extra tokens/request | `claudectx optimize --claudemd` |
 | No `.claudeignore` — reads `node_modules/` | 40–60% of search tokens wasted | `claudectx optimize --ignorefile` |
-| Full file reads for small questions | 70% overhead from unnecessary lines | `claudectx mcp` (smart_read tool) |
-| No prompt caching configured | Paying 10x for static context | `claudectx optimize --cache` |
-| No cross-session memory | Repeating same context every session | `claudectx compress` |
+| Full file reads for small questions | 70% overhead from unnecessary lines | `claudectx mcp` |
+| No prompt caching configured | Paying 10× for static context | `claudectx optimize --cache` |
+| No cross-session memory | Repeating the same context every session | `claudectx compress` |
 
-### Token cost breakdown — typical developer project
+### Where your tokens actually go
 
 | Component | Typical Tokens | % of Total | Fixable? |
 |---|---|---|---|
@@ -43,14 +41,20 @@ A typical Claude Code session costs **$2–$15 in tokens**. Most of it is wasted
 ## Quick Start
 
 ```bash
-# Analyze token usage in your current project (no API key needed)
+# No install needed — try it immediately
 npx claudectx analyze
 
 # Fix everything automatically
 npx claudectx optimize --apply
 
-# Live dashboard while coding (coming in v0.3.0)
-npx claudectx watch
+# See what's happening in real time while Claude is coding
+claudectx watch
+
+# After your session: compress it into a tiny MEMORY.md entry
+claudectx compress
+
+# Review your token spend for the last 7 days
+claudectx report
 ```
 
 ## Installation
@@ -61,7 +65,7 @@ npm install -g claudectx
 
 ---
 
-## Features
+## Commands
 
 ### `claudectx analyze` — See exactly where your tokens go
 
@@ -71,15 +75,13 @@ npm install -g claudectx
 ║               Project: /Users/you/my-project                 ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  Tokens per request: 18,432    Est. session cost: $1.84      ║
-║  Model: claude-sonnet-4.6      Context used: 1.8% of 1M     ║
+║  Model: claude-sonnet-4-6      Context used: 1.8% of 1M     ║
 ╠═══════════════════════════════╦══════════╦═══════╦══════════╣
 ║ Component                     ║  Tokens  ║  Cost ║  Status  ║
 ╠═══════════════════════════════╬══════════╬═══════╬══════════╣
 ║ System prompt (built-in)      ║   4,200  ║ $0.01 ║    ✓     ║
 ║ Tool definitions (built-in)   ║   2,100  ║ $0.01 ║    ✓     ║
-║ MCP schemas (3 tools)         ║     540  ║ $0.00 ║    ✓     ║
 ║ CLAUDE.md (./CLAUDE.md)       ║   7,841  ║ $0.02 ║    ⚠     ║
-║ User CLAUDE.md (~/.claude/)   ║   1,200  ║ $0.00 ║    ✓     ║
 ║ MEMORY.md                     ║   2,551  ║ $0.01 ║    ✓     ║
 ╠═══════════════════════════════╬══════════╬═══════╬══════════╣
 ║ TOTAL (per request)           ║  18,432  ║ $0.06 ║          ║
@@ -95,14 +97,13 @@ npm install -g claudectx
       → Run `claudectx optimize --ignorefile` to generate one
 
   [3] CLAUDE.md contains dynamic timestamp on line 3
-      → Breaks prompt caching — removing saves ~88% on static context
+      → Breaks prompt caching — run `claudectx optimize --cache` to fix
 ```
 
-**Options:**
 ```bash
 claudectx analyze                        # Analyze current directory
 claudectx analyze --path /path/to/proj  # Analyze specific path
-claudectx analyze --json                 # Raw JSON output (for scripting)
+claudectx analyze --json                 # Raw JSON output
 claudectx analyze --model sonnet         # Calculate for specific model
 claudectx analyze --watch                # Re-run on file changes
 ```
@@ -112,105 +113,152 @@ claudectx analyze --watch                # Re-run on file changes
 ### `claudectx optimize` — Auto-fix token waste
 
 ```bash
-claudectx optimize                    # Interactive mode — confirm each change
+claudectx optimize                    # Interactive — confirm each change
 claudectx optimize --apply            # Apply all fixes without prompting
 claudectx optimize --dry-run          # Preview changes without applying
 claudectx optimize --claudemd         # Only optimize CLAUDE.md
 claudectx optimize --ignorefile       # Only generate .claudeignore
-claudectx optimize --cache            # Only apply caching recommendations
+claudectx optimize --cache            # Only fix cache-busting content
 claudectx optimize --hooks            # Only install session hooks
 ```
 
-**What it fixes:**
-- **CLAUDE.md splitter** — Parses your CLAUDE.md by sections, keeps core rules inline, moves reference docs to `docs/ai-context/` loaded on demand. Target: under 2,000 tokens.
-- **.claudeignore generator** — Generates a `.claudeignore` inheriting from `.gitignore` plus Claude-specific patterns (`node_modules/`, `dist/`, lock files, `*.map`, migrations).
-- **Cache advisor** — Detects date strings, env var references, and other patterns that break prompt caching. Tells you exactly which lines to fix.
-- **Hooks installer** — Installs Stop and PostToolUse hooks in `.claude/settings.json` for session compression and file read tracking.
+What it does:
+
+- **CLAUDE.md splitter** — Parses your CLAUDE.md by `##` sections, keeps core rules inline (<2K tokens), moves reference docs to `.claude/` loaded on demand with `@file` references.
+- **.claudeignore generator** — Detects your project type (Node, Python, Rust, Go) and generates a `.claudeignore` with sensible defaults.
+- **Cache advisor** — Finds date strings, timestamps, and other patterns that break prompt caching and comments them out.
+- **Hooks installer** — Installs a `PostToolUse` hook in `.claude/settings.local.json` so `claudectx watch` can track files in real time.
 
 ---
 
-### `claudectx watch` — Live token dashboard *(v0.3.0)*
+### `claudectx watch` — Live token dashboard
 
-Real-time terminal dashboard showing token burn rate, cache hit rate, and cost while Claude Code is running.
+Real-time terminal UI showing token burn rate, cache hit rate, and most-read files while Claude Code is running.
 
+```bash
+claudectx watch                    # Launch dashboard
+claudectx watch --session <id>     # Watch a specific session
+claudectx watch --clear            # Clear the read log and exit
 ```
-╔══════════════════════ claudectx watch ═══════════════════════╗
-║                                                              ║
-║  Context Window  [████████████░░░░░░░░░░░░░░] 42% (42K/1M) ║
-║                                                              ║
-╠═══════════════════════╦══════════════════════════════════════╣
-║  Session Cost         ║  Cache Performance                   ║
-║  Input:   $0.84       ║  Hit Rate:  [████████░░] 78%        ║
-║  Output:  $0.23       ║  Hits:  47  Misses: 13              ║
-║  Total:   $1.07       ║  Savings: $2.34 so far              ║
-╠═══════════════════════╩══════════════════════════════════════╣
-║  Top Token Consumers This Session                            ║
-║  1. CLAUDE.md              7,841 tokens  (injected 60x)     ║
-║  2. src/app/route.ts       4,200 tokens  (read 3x)          ║
-╚══════════════════════════════════════════════════════════════╝
-```
+
+The dashboard auto-refreshes every 2 seconds and updates instantly when a new file is read (requires hooks from `claudectx optimize --hooks`).
 
 ---
 
-### `claudectx mcp` — Smart MCP server *(v0.4.0)*
+### `claudectx mcp` — Smart MCP server
 
-An MCP server that replaces Claude Code's full file reads with symbol-level reads — **97% fewer tokens per read**.
+An MCP server that lets Claude read just one function or class from a file instead of the whole thing — **up to 97% fewer tokens per read**.
 
 ```bash
 claudectx mcp                  # Start MCP server (stdio)
 claudectx mcp --install        # Auto-add to .claude/settings.json
 ```
 
-**MCP tools provided:**
-- **`smart_read`** — Read just one function/class/symbol from a file instead of the whole file
-- **`index_query`** — Answer "where is X defined?" without reading files at all
-- **`diff_read`** — Get only the lines that changed since your session started
+**Tools provided to Claude:**
+- **`smart_read`** — Read a specific symbol (function, class, method) by name, or a line range
+- **`search_symbols`** — Find where a symbol is defined without reading any files
+- **`index_project`** — Build the symbol index for the current project
 
----
+Configure manually in `.claude/settings.json`:
 
-### `claudectx compress` — Session memory compression *(v0.5.0)*
-
-At session end, compress the full conversation into a minimal MEMORY.md entry.
-
-```bash
-claudectx compress              # Compress most recent session
-claudectx compress --auto       # Non-interactive (for hooks)
-claudectx compress --prune --days 30  # Also prune old entries
+```json
+{
+  "mcpServers": {
+    "claudectx": {
+      "command": "claudectx",
+      "args": ["mcp"],
+      "type": "stdio"
+    }
+  }
+}
 ```
 
-**Result:** 8,420-token session → 187-token memory entry (97.8% reduction)
+---
+
+### `claudectx compress` — Session memory compression
+
+Compress the full session JSONL into a compact MEMORY.md entry at the end of your session. Uses `claude-haiku` if `ANTHROPIC_API_KEY` is set, otherwise falls back to a structured heuristic summary.
+
+```bash
+claudectx compress                        # Compress most recent session
+claudectx compress --session <id>         # Compress specific session
+claudectx compress --auto                 # Non-interactive (for hooks)
+claudectx compress --prune --days 30      # Also prune entries older than 30 days
+claudectx compress --api-key <key>        # Provide API key explicitly
+```
+
+A typical 8,000-token session compresses to ~180 tokens — **97.8% reduction**.
 
 ---
 
-### `claudectx report` — Usage analytics *(v0.5.0)*
+### `claudectx report` — Usage analytics
 
 ```bash
-claudectx report                # Last 7 days
+claudectx report                # Last 7 days (plain text)
 claudectx report --days 30      # Last 30 days
 claudectx report --json         # JSON output
-claudectx report --markdown     # Save as markdown
+claudectx report --markdown     # Markdown output
+claudectx report --model opus   # Cost estimate for a different model
 ```
 
-Shows: total cost, daily breakdown, cache hit rate, most expensive sessions, top files read, and personalized recommendations.
+```
+claudectx report — 7-day summary (2026-04-04 → 2026-04-11)
+══════════════════════════════════════════════════════════════════════
+
+TOTALS
+────────────────────────────
+  Sessions:              23
+  Requests:              847
+  Input tokens:          2,341,200
+  Output tokens:         318,400
+  Cache reads:           1,204,000  (51% hit rate)
+  Total cost (est.):     $4.87
+  Avg cost/session:      $0.21
+  Avg tokens/request:    2,766
+
+DAILY USAGE
+────────────────────────────
+  2026-04-11  ████████████████░░  412K in  $1.02  (5 sess)
+  2026-04-10  █████████░░░░░░░░░  234K in  $0.58  (4 sess)
+  ...
+```
+
+---
+
+## How it all fits together
+
+```
+Before claudectx:                    After claudectx:
+─────────────────────────────        ─────────────────────────────
+Every request:                       Every request:
+  CLAUDE.md: 12,400 tokens     →       CLAUDE.md core: 1,800 tokens
+  No caching: pay full price   →       Cache hit rate: 70%+
+  Full file reads every time   →       smart_read: symbol-level only
+
+End of session:                      End of session:
+  Session forgotten            →       claudectx compress → 187 tokens
+  Start from scratch next time →       MEMORY.md carries key context forward
+```
 
 ---
 
 ## Token Savings — Share Your Results
 
-Join the **[Token Savings Hall of Fame](https://github.com/Horilla/claudectx/discussions)** — share your before/after numbers and help other developers find this tool.
+Join the **[Token Savings Hall of Fame](https://github.com/Horilla/claudectx/discussions)** — share your before/after numbers.
 
 ---
 
 ## Contributing
 
-We welcome PRs! Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
+PRs welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
 ```bash
 git clone https://github.com/Horilla/claudectx.git
 cd claudectx
 npm install
 npm run build
-npm test
+npm test          # 199 tests, should all pass
+npm run lint      # 0 errors expected
 ```
 
 ## License

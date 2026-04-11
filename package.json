@@ -1,6 +1,6 @@
 {
   "name": "claudectx",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Reduce Claude Code token usage by up to 80%. Context analyzer, auto-optimizer, live dashboard, and smart MCP tools.",
   "bin": {
     "claudectx": "./dist/index.js"
