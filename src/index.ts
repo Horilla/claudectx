@@ -5,6 +5,12 @@ import { watchCommand } from './commands/watch.js';
 import { mcpCommand } from './commands/mcp.js';
 import { compressCommand } from './commands/compress.js';
 import { reportCommand } from './commands/report.js';
+import { budgetCommand } from './commands/budget.js';
+import { warmupCommand } from './commands/warmup.js';
+import { driftCommand } from './commands/drift.js';
+import { hooksCommand } from './commands/hooks.js';
+import { convertCommand } from './commands/convert.js';
+import { teamsCommand } from './commands/teams.js';
 
 // Version injected at build time by tsup via package.json
 const VERSION = '1.0.0';
@@ -98,6 +104,80 @@ program
   .option('-m, --model <model>', 'Claude model for cost estimates (haiku|sonnet|opus)', 'sonnet')
   .action(async (options) => {
     await reportCommand(options);
+  });
+
+// ─── budget ───────────────────────────────────────────────────────────────────
+program
+  .command('budget <globs...>')
+  .description('Estimate token cost before running a task')
+  .option('-m, --model <model>', 'Model for cost estimates (haiku|sonnet|opus)', 'sonnet')
+  .option('--threshold <n>', 'Warn if total exceeds N tokens', '10000')
+  .option('-p, --path <path>', 'Project directory')
+  .option('--json', 'JSON output')
+  .action(async (globs: string[], options) => {
+    await budgetCommand(globs, options);
+  });
+
+// ─── warmup ───────────────────────────────────────────────────────────────────
+program
+  .command('warmup')
+  .description('Pre-warm the Anthropic prompt cache with your CLAUDE.md')
+  .option('-m, --model <model>', 'Model (haiku|sonnet|opus)', 'haiku')
+  .option('--ttl <minutes>', 'Cache TTL: 5 or 60', '5')
+  .option('--cron <expr>', 'Install as cron job (e.g. "0 9 * * 1-5")')
+  .option('--api-key <key>', 'Anthropic API key')
+  .option('-p, --path <path>', 'Project directory')
+  .option('--json', 'JSON output')
+  .action(async (options) => {
+    await warmupCommand(options);
+  });
+
+// ─── drift ────────────────────────────────────────────────────────────────────
+program
+  .command('drift')
+  .description('Detect stale references and dead sections in CLAUDE.md')
+  .option('-p, --path <path>', 'Project directory')
+  .option('--days <n>', 'Days window for section usage', '30')
+  .option('--fix', 'Interactively remove flagged lines')
+  .option('--json', 'JSON output')
+  .action(async (options) => {
+    await driftCommand(options);
+  });
+
+// ─── hooks ────────────────────────────────────────────────────────────────────
+program
+  .command('hooks [subcommand] [name]')
+  .description('Hook marketplace: list | add <name> | remove <name> | status')
+  .option('-p, --path <path>', 'Project directory')
+  .option('--config <pair...>', 'key=value config pairs for add')
+  .action(async (subcommand: string | undefined, name: string | undefined, options) => {
+    await hooksCommand(subcommand, { ...options, name });
+  });
+
+// ─── convert ──────────────────────────────────────────────────────────────────
+program
+  .command('convert')
+  .description('Convert CLAUDE.md to another AI assistant format')
+  .option('--from <assistant>', 'Source format (default: claude)', 'claude')
+  .requiredOption('--to <assistant>', 'Target format: cursor | copilot | windsurf')
+  .option('--dry-run', 'Preview without writing')
+  .option('-p, --path <path>', 'Project directory')
+  .action(async (options) => {
+    await convertCommand(options);
+  });
+
+// ─── teams ────────────────────────────────────────────────────────────────────
+program
+  .command('teams [subcommand]')
+  .description('Multi-developer cost attribution (export | aggregate | share)')
+  .option('--days <n>', 'Days to include', '30')
+  .option('-m, --model <model>', 'Model', 'sonnet')
+  .option('--anonymize', 'Replace identities with Dev 1, Dev 2...')
+  .option('--dir <path>', 'Directory with team export JSON files')
+  .option('--to <path>', 'Destination for share sub-command')
+  .option('--json', 'JSON output')
+  .action(async (subcommand: string | undefined, options) => {
+    await teamsCommand(subcommand ?? 'export', options);
   });
 
 program.parse();

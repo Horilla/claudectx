@@ -90,6 +90,22 @@ export function applyHooksInstall(result: HooksResult): void {
 }
 
 /**
+ * Write arbitrary merged settings to .claude/settings.local.json.
+ * Used by the hooks marketplace to add/remove named hooks.
+ */
+export function writeHooksSettings(
+  projectRoot: string,
+  mergedSettings: unknown,
+): void {
+  const settingsPath = path.join(projectRoot, '.claude', 'settings.local.json');
+  const dir = path.dirname(settingsPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  fs.writeFileSync(settingsPath, JSON.stringify(mergedSettings, null, 2) + '\n', 'utf-8');
+}
+
+/**
  * Check whether claudectx hooks are already installed in a project.
  */
 export function isAlreadyInstalled(projectRoot: string): boolean {

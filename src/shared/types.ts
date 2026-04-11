@@ -32,7 +32,11 @@ export type WasteCode =
   | 'LARGE_REFERENCE_FILE'
   | 'TOO_MANY_REFERENCES'
   | 'REDUNDANT_CONTENT'
-  | 'NO_CACHING_CONFIGURED';
+  | 'NO_CACHING_CONFIGURED'
+  | 'DEAD_REFERENCE'
+  | 'STALE_SECTION'
+  | 'GIT_DELETED'
+  | 'DEAD_INLINE_PATH';
 
 export interface AnalysisReport {
   projectPath: string;
@@ -118,6 +122,22 @@ export interface SymbolResult {
   lineEnd: number;
   signature: string;
   docstring?: string;
+}
+
+// === Teams ===
+
+export interface TeamIdentity {
+  email?: string;
+  hostname: string;
+  anonymizedLabel?: string;
+}
+
+// === Hooks Marketplace ===
+
+export interface InstalledHookMeta {
+  name: string;
+  installedAt: string;
+  config: Record<string, string | number | boolean>;
 }
 
 // === Configuration ===
