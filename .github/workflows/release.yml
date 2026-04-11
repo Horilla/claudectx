@@ -25,7 +25,10 @@ jobs:
       - name: Sync version from tag
         run: |
           TAG="${GITHUB_REF_NAME#v}"
-          npm version "$TAG" --no-git-tag-version
+          CURRENT=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$CURRENT" ]; then
+            npm version "$TAG" --no-git-tag-version
+          fi
         env:
           GITHUB_REF_NAME: ${{ github.ref_name }}
 
