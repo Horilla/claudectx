@@ -34,12 +34,13 @@ program
 program
   .command('optimize')
   .alias('o')
-  .description('Auto-fix token waste issues (coming in v0.2.0)')
+  .description('Auto-fix token waste issues in CLAUDE.md, .claudeignore, and hooks')
+  .option('-p, --path <path>', 'Path to project directory (default: cwd)')
   .option('--apply', 'Apply all fixes without prompting')
   .option('--dry-run', 'Preview changes without applying')
-  .option('--claudemd', 'Only optimize CLAUDE.md')
+  .option('--claudemd', 'Only optimize CLAUDE.md (split into @files)')
   .option('--ignorefile', 'Only generate .claudeignore')
-  .option('--cache', 'Only apply caching recommendations')
+  .option('--cache', 'Only fix cache-busting content')
   .option('--hooks', 'Only install session hooks')
   .option('--api-key <key>', 'Anthropic API key (for AI-powered CLAUDE.md rewriting)')
   .action(async (options) => {
