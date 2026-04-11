@@ -11,6 +11,10 @@
 
 <br />
 
+<div align="center">
+  <img src="docs/demo.gif" alt="claudectx demo" width="700" />
+</div>
+
 ---
 
 ## Why claudectx?
