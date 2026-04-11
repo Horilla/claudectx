@@ -75,12 +75,13 @@ program
 program
   .command('compress')
   .alias('c')
-  .description('Compress session into a minimal MEMORY.md entry (coming in v0.5.0)')
-  .option('--session <id>', 'Compress specific session ID')
+  .description('Compress a Claude Code session into a compact MEMORY.md entry')
+  .option('-p, --path <path>', 'Project directory (default: cwd)')
+  .option('--session <id>', 'Compress specific session ID (default: most recent)')
   .option('--auto', 'Non-interactive mode (for hooks)')
-  .option('--max-tokens <n>', 'Max size of compressed entry', '200')
   .option('--prune', 'Also prune old MEMORY.md entries')
-  .option('--days <n>', 'Days threshold for pruning', '30')
+  .option('--days <n>', 'Days threshold for pruning (with --prune)', '30')
+  .option('--api-key <key>', 'Anthropic API key for AI-powered summarization')
   .action(async (options) => {
     await compressCommand(options);
   });
@@ -89,10 +90,12 @@ program
 program
   .command('report')
   .alias('r')
-  .description('Usage analytics report (coming in v0.5.0)')
-  .option('--days <n>', 'Number of days to report on', '7')
-  .option('--json', 'JSON output')
-  .option('--markdown', 'Markdown output')
+  .description('Show token usage analytics for the last N days')
+  .option('-p, --path <path>', 'Project directory (default: cwd)')
+  .option('--days <n>', 'Number of days to include', '7')
+  .option('--json', 'Machine-readable JSON output')
+  .option('--markdown', 'GitHub-flavoured Markdown output')
+  .option('-m, --model <model>', 'Claude model for cost estimates (haiku|sonnet|opus)', 'sonnet')
   .action(async (options) => {
     await reportCommand(options);
   });
