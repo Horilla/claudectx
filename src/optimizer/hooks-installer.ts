@@ -16,13 +16,14 @@ export interface HooksResult {
 const CLAUDECTX_HOOKS = {
   PostToolUse: [
     {
-      // Track every file Claude reads so the watch dashboard can count tokens
+      // Pipe the hook JSON payload to `claudectx watch --log-stdin`.
+      // Claude Code passes { tool_name, tool_input, tool_response, session_id }
+      // via stdin when the PostToolUse hook fires.
       matcher: 'Read',
       hooks: [
         {
           type: 'command',
-          command:
-            'claudectx watch --log-read "$CLAUDE_TOOL_INPUT_FILE_PATH" "${CLAUDE_TOOL_OUTPUT_LINES:-0}"',
+          command: 'claudectx watch --log-stdin',
         },
       ],
     },
@@ -58,7 +59,8 @@ export function planHooksInstall(projectRoot: string): HooksResult {
     (h) =>
       typeof h === 'object' &&
       h !== null &&
-      (h as Record<string, unknown>).matcher === 'Read'
+      (h as Record<string, unknown>).matcher === 'Read' &&
+      JSON.stringify(h).includes('claudectx')
   );
 
   const mergedPostToolUse = alreadyInstalled

@@ -51,9 +51,11 @@ program
 program
   .command('watch')
   .alias('w')
-  .description('Live token usage dashboard (coming in v0.3.0)')
-  .option('--session <id>', 'Watch specific session ID')
-  .option('--log-read <file> [tokens]', 'Log a file read event (called by hook)')
+  .description('Live token-usage dashboard — tracks files read and session cost in real time')
+  .option('--session <id>', 'Watch a specific session ID (default: most recent)')
+  .option('-m, --model <model>', 'Model for cost estimates (haiku|sonnet|opus)', 'sonnet')
+  .option('--log-stdin', 'Read hook JSON from stdin and log the file path (called by Claude Code hook)')
+  .option('--clear', 'Clear the session file-read log and exit')
   .action(async (options) => {
     await watchCommand(options);
   });
