@@ -63,9 +63,10 @@ program
 // ─── mcp ──────────────────────────────────────────────────────────────────────
 program
   .command('mcp')
-  .description('Start smart MCP server with symbol-level file reading (coming in v0.4.0)')
-  .option('--port <port>', 'Use HTTP transport on specified port (default: stdio)')
-  .option('--install', 'Auto-add to .claude/settings.json')
+  .description('Start the smart MCP server — symbol-level file reading for Claude Code')
+  .option('-p, --path <path>', 'Project root (default: cwd)')
+  .option('--port <port>', 'HTTP transport port (stdio is default; HTTP coming soon)')
+  .option('--install', 'Add server to .claude/settings.json and exit')
   .action(async (options) => {
     await mcpCommand(options);
   });
