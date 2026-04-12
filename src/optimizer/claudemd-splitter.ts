@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { countTokens } from '../analyzer/tokenizer.js';
+import { backupFile } from '../shared/backup-manager.js';
 
 export interface ParsedSection {
   title: string; // empty string = preamble (content before first ## heading)
@@ -125,9 +126,15 @@ export function planSplit(claudeMdPath: string, sectionsToExtract: string[]): Sp
 
 /**
  * Apply the planned split: write extracted files and overwrite CLAUDE.md.
+ * Backs up CLAUDE.md before overwriting so the user can run `claudectx revert` to undo.
  */
-export function applySplit(result: SplitResult): void {
+export async function applySplit(result: SplitResult): Promise<void> {
   if (result.extractedFiles.length === 0) return;
+
+  // Back up original CLAUDE.md before modifying
+  if (fs.existsSync(result.claudeMdPath)) {
+    await backupFile(result.claudeMdPath, 'optimize');
+  }
 
   const claudeDir = path.dirname(result.extractedFiles[0].filePath);
   if (!fs.existsSync(claudeDir)) {

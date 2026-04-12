@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import { CACHE_BUSTERS } from '../shared/constants.js';
+import { backupFile } from '../shared/backup-manager.js';
 
 export interface CacheFix {
   label: string;
@@ -66,7 +67,11 @@ export function planCacheFixes(claudeMdPath: string): CacheApplierResult {
 
 /**
  * Write the fixed content back to disk.
+ * Backs up CLAUDE.md first so the user can run `claudectx revert` to undo.
  */
-export function applyAndWriteCacheFixes(claudeMdPath: string, result: CacheApplierResult): void {
+export async function applyAndWriteCacheFixes(claudeMdPath: string, result: CacheApplierResult): Promise<void> {
+  if (fs.existsSync(claudeMdPath)) {
+    await backupFile(claudeMdPath, 'optimize');
+  }
   fs.writeFileSync(claudeMdPath, result.newContent, 'utf-8');
 }

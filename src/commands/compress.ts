@@ -21,6 +21,7 @@ import {
   isAlreadyCompressed,
 } from '../compressor/memory-writer.js';
 import { getApiKey } from '../shared/config.js';
+import { backupFile } from '../shared/backup-manager.js';
 
 export interface CompressOptions {
   session?: string;
@@ -136,10 +137,31 @@ export async function compressCommand(options: CompressOptions): Promise<void> {
     const days = parseInt(options.days ?? '30', 10);
     if (!fs.existsSync(memoryFilePath)) return;
 
+    // Confirm before silently deleting MEMORY.md entries (skip in --auto mode)
+    if (!options.auto) {
+      let confirmed = true;
+      try {
+        const { confirm } = await import('@inquirer/prompts');
+        confirmed = await confirm({
+          message: `Prune MEMORY.md entries older than ${days} days? Run 'claudectx revert' to undo.`,
+          default: false,
+        });
+      } catch {
+        // Non-interactive environment — proceed
+      }
+      if (!confirmed) {
+        process.stdout.write(chalk.dim('Prune skipped.\n'));
+        return;
+      }
+    }
+
+    // Back up MEMORY.md before pruning
+    await backupFile(memoryFilePath, 'compress');
+
     const pruned = pruneOldEntries(memoryFilePath, days);
     if (pruned.removed > 0 && !options.auto) {
       process.stdout.write(
-        chalk.dim(`Pruned ${pruned.removed} entr${pruned.removed === 1 ? 'y' : 'ies'} older than ${days} days.\n`)
+        chalk.dim(`Pruned ${pruned.removed} entr${pruned.removed === 1 ? 'y' : 'ies'} older than ${days} days. Run 'claudectx revert' to undo.\n`)
       );
     }
   }

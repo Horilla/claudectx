@@ -134,25 +134,25 @@ describe('applySplit', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('writes extracted file to .claude/ directory', () => {
+  it('writes extracted file to .claude/ directory', async () => {
     const result = planSplit(claudeMdPath, ['Architecture']);
-    applySplit(result);
+    await applySplit(result);
     expect(fs.existsSync(result.extractedFiles[0].filePath)).toBe(true);
   });
 
-  it('overwrites CLAUDE.md with the new content', () => {
+  it('overwrites CLAUDE.md with the new content', async () => {
     const result = planSplit(claudeMdPath, ['Architecture']);
-    applySplit(result);
+    await applySplit(result);
     const written = fs.readFileSync(claudeMdPath, 'utf-8');
     expect(written).toContain('@.claude/architecture.md');
     expect(written).not.toContain('This is a detailed architecture description');
   });
 
-  it('creates .claude/ directory if it does not exist', () => {
+  it('creates .claude/ directory if it does not exist', async () => {
     const result = planSplit(claudeMdPath, ['Architecture']);
     const claudeDir = path.join(tmpDir, '.claude');
     expect(fs.existsSync(claudeDir)).toBe(false);
-    applySplit(result);
+    await applySplit(result);
     expect(fs.existsSync(claudeDir)).toBe(true);
   });
 

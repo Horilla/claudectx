@@ -134,6 +134,22 @@ async function installCron(cronExpr: string): Promise<void> {
     process.exit(1);
   }
 
+  // Confirm before modifying the system crontab
+  let confirmed = true;
+  try {
+    const { confirm } = await import('@inquirer/prompts');
+    confirmed = await confirm({
+      message: `Install cron job "${cronExpr} claudectx warmup" in your system crontab?`,
+      default: false,
+    });
+  } catch {
+    // Non-interactive — proceed
+  }
+  if (!confirmed) {
+    process.stdout.write('  Cron install cancelled.\n');
+    return;
+  }
+
   const { execSync } = await import('child_process');
   // Never embed the API key — require it via environment variable at runtime
   const command = `claudectx warmup`;

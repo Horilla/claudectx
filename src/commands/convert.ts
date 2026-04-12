@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { findProjectRoot } from '../analyzer/context-parser.js';
+import { backupFile } from '../shared/backup-manager.js';
 
 export interface ConvertOptions {
   path?: string;
@@ -123,7 +124,12 @@ export async function convertCommand(options: ConvertOptions): Promise<void> {
     const files = claudeMdToCursorRules(content);
     const targetDir = path.join(projectRoot, '.cursor', 'rules');
 
-    process.stdout.write(`\nConverting CLAUDE.md → ${files.length} Cursor rule file(s)\n\n`);
+    process.stdout.write(`\nConverting CLAUDE.md → ${files.length} Cursor rule file(s)\n`);
+    if (!options.dryRun) {
+      process.stdout.write(`  ⚠  Existing .mdc files will be overwritten. A backup is saved automatically.\n`);
+      process.stdout.write(`     Run 'claudectx revert --list' to see backups.\n`);
+    }
+    process.stdout.write('\n');
 
     for (const file of files) {
       const filePath = path.join(targetDir, file.filename);
@@ -132,6 +138,7 @@ export async function convertCommand(options: ConvertOptions): Promise<void> {
       process.stdout.write(`  ${prefix}→ .cursor/rules/${file.filename}\n`);
       if (!options.dryRun) {
         fs.mkdirSync(targetDir, { recursive: true });
+        if (exists) await backupFile(filePath, 'convert');
         fs.writeFileSync(filePath, file.content, 'utf-8');
       }
     }
@@ -142,8 +149,12 @@ export async function convertCommand(options: ConvertOptions): Promise<void> {
     const targetPath = path.join(projectRoot, '.github', 'copilot-instructions.md');
     const exists = fs.existsSync(targetPath);
     process.stdout.write(`\nConverting CLAUDE.md → .github/copilot-instructions.md${exists ? ' [overwrite]' : ''}\n`);
+    if (!options.dryRun && exists) {
+      process.stdout.write(`  ⚠  Existing file will be overwritten. Run 'claudectx revert --list' to undo.\n`);
+    }
     if (!options.dryRun) {
       fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      if (exists) await backupFile(targetPath, 'convert');
       fs.writeFileSync(targetPath, converted, 'utf-8');
       process.stdout.write(`  ✓ Written to ${targetPath}\n\n`);
     } else {
@@ -155,7 +166,11 @@ export async function convertCommand(options: ConvertOptions): Promise<void> {
     const targetPath = path.join(projectRoot, '.windsurfrules');
     const exists = fs.existsSync(targetPath);
     process.stdout.write(`\nConverting CLAUDE.md → .windsurfrules${exists ? ' [overwrite]' : ''}\n`);
+    if (!options.dryRun && exists) {
+      process.stdout.write(`  ⚠  Existing file will be overwritten. Run 'claudectx revert --list' to undo.\n`);
+    }
     if (!options.dryRun) {
+      if (exists) await backupFile(targetPath, 'convert');
       fs.writeFileSync(targetPath, converted, 'utf-8');
       process.stdout.write(`  ✓ Written to ${targetPath}\n\n`);
     } else {

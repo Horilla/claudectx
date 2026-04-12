@@ -3,6 +3,7 @@ import * as path from 'path';
 import { findProjectRoot } from '../analyzer/context-parser.js';
 import { HOOK_REGISTRY, getHook, buildHookEntry, interpolateCommand } from '../hooks/registry.js';
 import { writeHooksSettings } from '../optimizer/hooks-installer.js';
+import { backupFile } from '../shared/backup-manager.js';
 
 export interface HooksOptions {
   path?: string;
@@ -171,9 +172,32 @@ export async function hooksAdd(
 
 export async function hooksRemove(name: string, projectRoot: string): Promise<void> {
   const settings = readInstalledHooks(projectRoot);
+
+  // Confirm before removing (no easy undo without backup)
+  let confirmed = true;
+  try {
+    const { confirm } = await import('@inquirer/prompts');
+    confirmed = await confirm({
+      message: `Remove hook "${name}"? Run 'claudectx revert' to undo.`,
+      default: false,
+    });
+  } catch {
+    // Non-interactive — proceed
+  }
+  if (!confirmed) {
+    process.stdout.write('  Cancelled.\n\n');
+    return;
+  }
+
+  // Back up settings before modifying
+  const settingsPath = path.join(projectRoot, '.claude', 'settings.local.json');
+  if (fs.existsSync(settingsPath)) {
+    await backupFile(settingsPath, 'hooks');
+  }
+
   const updated = removeHookByName(settings, name);
   writeHooksSettings(projectRoot, updated);
-  process.stdout.write(`  ✓ Hook "${name}" removed.\n\n`);
+  process.stdout.write(`  ✓ Hook "${name}" removed. Run 'claudectx revert --list' to undo.\n\n`);
 }
 
 export async function hooksStatus(projectRoot: string): Promise<void> {

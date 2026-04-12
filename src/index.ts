@@ -11,6 +11,7 @@ import { driftCommand } from './commands/drift.js';
 import { hooksCommand } from './commands/hooks.js';
 import { convertCommand } from './commands/convert.js';
 import { teamsCommand } from './commands/teams.js';
+import { revertCommand } from './commands/revert.js';
 
 // Version injected at build time by tsup via package.json
 const VERSION = '1.1.2';
@@ -178,6 +179,18 @@ program
   .option('--json', 'JSON output')
   .action(async (subcommand: string | undefined, options) => {
     await teamsCommand(subcommand ?? 'export', options);
+  });
+
+// ─── revert ───────────────────────────────────────────────────────────────────
+program
+  .command('revert')
+  .description('List and restore backups created automatically by claudectx commands')
+  .option('--list', 'Show all backups')
+  .option('--id <id>', 'Restore a specific backup by ID')
+  .option('--file <path>', 'Filter backups by original file path')
+  .option('--json', 'JSON output')
+  .action(async (options) => {
+    await revertCommand(options);
   });
 
 program.parse();

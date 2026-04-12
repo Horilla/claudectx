@@ -307,7 +307,7 @@ async function runClaudeMdSplit(
     return;
   }
 
-  applySplit(splitResult);
+  await applySplit(splitResult);
   logger.success(
     `Extracted ${splitResult.extractedFiles.length} section(s). Saved ~${splitResult.tokensSaved} tokens/request.`
   );
@@ -361,7 +361,7 @@ async function runCacheOptimization(
     return;
   }
 
-  applyAndWriteCacheFixes(claudeMdPath, result);
+  await applyAndWriteCacheFixes(claudeMdPath, result);
   logger.success(`Fixed ${result.fixes.length} cache-busting pattern(s) in CLAUDE.md.`);
 }
 
