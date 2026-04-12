@@ -12,10 +12,13 @@ function makeData(overrides: Partial<ReportData> = {}): ReportData {
     totalInputTokens: 85_000,
     totalOutputTokens: 12_000,
     totalCacheReadTokens: 30_000,
+    totalCacheCreationTokens: 5_000,
     cacheHitRate: 35,
     totalCostUsd: 0.42,
     avgCostPerSession: 0.084,
     avgTokensPerRequest: 2023,
+    dailyAvgCostUsd: 0.06,
+    projectedMonthlyUsd: 1.8,
     byDay: [
       {
         date: '2026-04-11',
@@ -23,6 +26,7 @@ function makeData(overrides: Partial<ReportData> = {}): ReportData {
         inputTokens: 40_000,
         outputTokens: 6_000,
         cacheReadTokens: 15_000,
+        cacheCreationTokens: 2_500,
         requests: 20,
         costUsd: 0.21,
       },
@@ -32,6 +36,7 @@ function makeData(overrides: Partial<ReportData> = {}): ReportData {
         inputTokens: 45_000,
         outputTokens: 6_000,
         cacheReadTokens: 15_000,
+        cacheCreationTokens: 2_500,
         requests: 22,
         costUsd: 0.21,
       },
@@ -113,6 +118,18 @@ describe('formatText', () => {
     const text = formatText(makeData({ totalCostUsd: 0.0042 }));
     expect(text).toContain('$0.0042');
   });
+
+  it('renders cache writes line', () => {
+    const text = formatText(makeData({ totalCacheCreationTokens: 5_000 }));
+    expect(text).toContain('Cache writes:');
+    expect(text).toContain('5,000');
+  });
+
+  it('renders projected monthly cost', () => {
+    const text = formatText(makeData({ projectedMonthlyUsd: 1.8 }));
+    expect(text).toContain('Projected');
+    expect(text).toContain('$1.80');
+  });
 });
 
 // ─── formatJSON ───────────────────────────────────────────────────────────────
@@ -175,6 +192,12 @@ describe('formatMarkdown', () => {
     const data = makeData({ topFiles: [] });
     const md = formatMarkdown(data);
     expect(md).not.toContain('## Top Files Read');
+  });
+
+  it('renders cache writes and projected cost in summary table', () => {
+    const md = formatMarkdown(makeData({ totalCacheCreationTokens: 5_000, projectedMonthlyUsd: 1.8 }));
+    expect(md).toContain('| Cache writes |');
+    expect(md).toContain('| Projected (30-day) |');
   });
 });
 

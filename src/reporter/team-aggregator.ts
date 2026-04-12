@@ -52,9 +52,20 @@ export function getDeveloperIdentity(): string {
   return os.hostname();
 }
 
-function calcCost(inputTokens: number, outputTokens: number, model: ClaudeModel): number {
+function calcCost(
+  inputTokens: number,
+  outputTokens: number,
+  cacheCreationTokens: number,
+  cacheReadTokens: number,
+  model: ClaudeModel,
+): number {
   const p = MODEL_PRICING[model];
-  return (inputTokens / 1e6) * p.inputPerMillion + (outputTokens / 1e6) * p.outputPerMillion;
+  return (
+    (inputTokens / 1e6) * p.inputPerMillion +
+    (outputTokens / 1e6) * p.outputPerMillion +
+    (cacheCreationTokens / 1e6) * p.cacheWritePerMillion +
+    (cacheReadTokens / 1e6) * p.cacheReadPerMillion
+  );
 }
 
 function isoDate(d: Date): string {
@@ -97,7 +108,7 @@ export async function buildTeamExport(
     const dateStr = isoDate(d);
     bucketMap.set(dateStr, {
       date: dateStr, sessions: 0, inputTokens: 0, outputTokens: 0,
-      cacheReadTokens: 0, requests: 0, costUsd: 0,
+      cacheReadTokens: 0, cacheCreationTokens: 0, requests: 0, costUsd: 0,
     });
   }
 
@@ -109,15 +120,16 @@ export async function buildTeamExport(
   for (const sf of sessionFiles) {
     const dateStr = isoDate(new Date(sf.mtimeMs));
     const bucket = bucketMap.get(dateStr);
-    const usage = readSessionUsage(sf.filePath);
+    const usage = await readSessionUsage(sf.filePath);
 
     if (bucket) {
       bucket.sessions++;
       bucket.inputTokens += usage.inputTokens;
       bucket.outputTokens += usage.outputTokens;
       bucket.cacheReadTokens += usage.cacheReadTokens;
+      bucket.cacheCreationTokens += usage.cacheCreationTokens;
       bucket.requests += usage.requestCount;
-      bucket.costUsd += calcCost(usage.inputTokens, usage.outputTokens, model);
+      bucket.costUsd += calcCost(usage.inputTokens, usage.outputTokens, usage.cacheCreationTokens, usage.cacheReadTokens, model);
     }
 
     totalInput += usage.inputTokens;
@@ -133,7 +145,7 @@ export async function buildTeamExport(
     .slice(0, 10)
     .map((s) => ({ filePath: s.filePath, readCount: s.readCount }));
 
-  const totalCostUsd = calcCost(totalInput, totalOutput, model);
+  const totalCostUsd = calcCost(totalInput, totalOutput, 0, totalCacheRead, model);
   const cacheHitRate = totalInput > 0 ? Math.round((totalCacheRead / totalInput) * 100) : 0;
   const uniqueSessions = new Set(sessionFiles.map((f) => f.sessionId)).size;
 

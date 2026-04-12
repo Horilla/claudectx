@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-04-12
+
+### Added
+- **4-tier cost accuracy**: `calcCost` in `usage-aggregator.ts` and `team-aggregator.ts` now accounts for all four Anthropic pricing tiers — `input`, `output`, `cache_creation` (write), and `cache_read`. Previously write costs were silently ignored, causing underreported totals for sessions with heavy prompt caching.
+- **Burn-rate projection**: `ReportData` gains `dailyAvgCostUsd` and `projectedMonthlyUsd` fields. Both `claudectx report` (text and markdown) now display **Daily avg cost** and **Projected (30-day)** so users can forecast spend before it surprises them.
+- **Cache writes visible**: `report` output now shows `Cache writes` token count alongside `Cache reads`, giving a complete picture of caching costs.
+
+### Changed
+- **Streaming session reader**: `readSessionUsage` in `session-reader.ts` is now `async` and streams JSONL line-by-line via `readline` + `createReadStream`, avoiding loading multi-MB session files entirely into memory.
+- `DayBucket` interface gains `cacheCreationTokens: number` field.
+- `Dashboard.tsx` updated to handle `readSessionUsage` as a Promise.
+
 ## [1.1.1] - 2026-04-12
 
 ### Security

@@ -188,23 +188,25 @@ export function Dashboard({
       ? findSessionFile(sessionId)
       : findSessionFile();
 
-    const usage = sessionFile
+    const usagePromise = sessionFile
       ? readSessionUsage(sessionFile)
-      : {
+      : Promise.resolve({
           inputTokens: 0,
           outputTokens: 0,
           cacheCreationTokens: 0,
           cacheReadTokens: 0,
           requestCount: 0,
-        };
+        });
 
-    setState((prev) => ({
-      fileStats,
-      usage,
-      sessionFile,
-      lastUpdated: new Date(),
-      tickCount: prev.tickCount + 1,
-    }));
+    usagePromise.then((usage) => {
+      setState((prev) => ({
+        fileStats,
+        usage,
+        sessionFile,
+        lastUpdated: new Date(),
+        tickCount: prev.tickCount + 1,
+      }));
+    }).catch(() => { /* ignore */ });
   }, [sessionId]);
 
   useEffect(() => {

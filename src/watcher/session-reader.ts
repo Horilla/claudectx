@@ -94,9 +94,10 @@ export function findSessionFile(sessionId?: string): string | null {
 
 /**
  * Parse a session JSONL file and aggregate token usage across all requests.
+ * Streams line-by-line to avoid loading large files entirely into memory.
  * Gracefully skips malformed lines.
  */
-export function readSessionUsage(sessionFilePath: string): SessionTokenUsage {
+export async function readSessionUsage(sessionFilePath: string): Promise<SessionTokenUsage> {
   const result: SessionTokenUsage = {
     inputTokens: 0,
     outputTokens: 0,
@@ -107,42 +108,46 @@ export function readSessionUsage(sessionFilePath: string): SessionTokenUsage {
 
   if (!fs.existsSync(sessionFilePath)) return result;
 
-  let content: string;
+  const { createReadStream } = await import('fs');
+  const { createInterface } = await import('readline');
+
   try {
-    content = fs.readFileSync(sessionFilePath, 'utf-8');
+    const rl = createInterface({
+      input: createReadStream(sessionFilePath, { encoding: 'utf-8' }),
+      crlfDelay: Infinity,
+    });
+
+    for await (const line of rl) {
+      if (!line.trim()) continue;
+      try {
+        const entry = JSON.parse(line) as Record<string, unknown>;
+
+        // Support both top-level usage and nested message.usage
+        const usage =
+          (entry.usage as Record<string, number> | undefined) ??
+          ((entry.message as Record<string, unknown> | undefined)?.usage as
+            | Record<string, number>
+            | undefined);
+
+        if (!usage) continue;
+
+        const isAssistant =
+          entry.type === 'assistant' ||
+          (entry.message as Record<string, unknown> | undefined)?.role === 'assistant';
+
+        if (isAssistant) {
+          result.inputTokens += usage.input_tokens ?? 0;
+          result.outputTokens += usage.output_tokens ?? 0;
+          result.cacheCreationTokens += usage.cache_creation_input_tokens ?? 0;
+          result.cacheReadTokens += usage.cache_read_input_tokens ?? 0;
+          result.requestCount++;
+        }
+      } catch {
+        // skip malformed lines
+      }
+    }
   } catch {
     return result;
-  }
-
-  const lines = content.trim().split('\n').filter(Boolean);
-
-  for (const line of lines) {
-    try {
-      const entry = JSON.parse(line) as Record<string, unknown>;
-
-      // Support both top-level usage and nested message.usage
-      const usage =
-        (entry.usage as Record<string, number> | undefined) ??
-        ((entry.message as Record<string, unknown> | undefined)?.usage as
-          | Record<string, number>
-          | undefined);
-
-      if (!usage) continue;
-
-      const isAssistant =
-        entry.type === 'assistant' ||
-        (entry.message as Record<string, unknown> | undefined)?.role === 'assistant';
-
-      if (isAssistant) {
-        result.inputTokens += usage.input_tokens ?? 0;
-        result.outputTokens += usage.output_tokens ?? 0;
-        result.cacheCreationTokens += usage.cache_creation_input_tokens ?? 0;
-        result.cacheReadTokens += usage.cache_read_input_tokens ?? 0;
-        result.requestCount++;
-      }
-    } catch {
-      // skip malformed lines
-    }
   }
 
   return result;

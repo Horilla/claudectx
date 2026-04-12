@@ -13,6 +13,7 @@ export interface DayBucket {
   inputTokens: number;
   outputTokens: number;
   cacheReadTokens: number;
+  cacheCreationTokens: number;
   requests: number;
   costUsd: number;
 }
@@ -26,10 +27,13 @@ export interface ReportData {
   totalInputTokens: number;
   totalOutputTokens: number;
   totalCacheReadTokens: number;
+  totalCacheCreationTokens: number;
   cacheHitRate: number; // 0-100
   totalCostUsd: number;
   avgCostPerSession: number;
   avgTokensPerRequest: number;
+  dailyAvgCostUsd: number;
+  projectedMonthlyUsd: number;
   byDay: DayBucket[];
   topFiles: Array<{ filePath: string; readCount: number }>;
   model: ClaudeModel;
@@ -40,9 +44,20 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function calcCost(inputTokens: number, outputTokens: number, model: ClaudeModel): number {
+function calcCost(
+  inputTokens: number,
+  outputTokens: number,
+  cacheCreationTokens: number,
+  cacheReadTokens: number,
+  model: ClaudeModel,
+): number {
   const p = MODEL_PRICING[model];
-  return (inputTokens / 1e6) * p.inputPerMillion + (outputTokens / 1e6) * p.outputPerMillion;
+  return (
+    (inputTokens / 1e6) * p.inputPerMillion +
+    (outputTokens / 1e6) * p.outputPerMillion +
+    (cacheCreationTokens / 1e6) * p.cacheWritePerMillion +
+    (cacheReadTokens / 1e6) * p.cacheReadPerMillion
+  );
 }
 
 /**
@@ -74,6 +89,7 @@ export async function aggregateUsage(
       inputTokens: 0,
       outputTokens: 0,
       cacheReadTokens: 0,
+      cacheCreationTokens: 0,
       requests: 0,
       costUsd: 0,
     });
@@ -83,23 +99,26 @@ export async function aggregateUsage(
   let totalInput = 0;
   let totalOutput = 0;
   let totalCacheRead = 0;
+  let totalCacheCreation = 0;
 
   for (const sf of sessionFiles) {
     const dateStr = isoDate(new Date(sf.mtimeMs));
     const bucket = bucketMap.get(dateStr);
     if (!bucket) continue;
 
-    const usage = readSessionUsage(sf.filePath);
+    const usage = await readSessionUsage(sf.filePath);
     bucket.sessions++;
     bucket.inputTokens += usage.inputTokens;
     bucket.outputTokens += usage.outputTokens;
     bucket.cacheReadTokens += usage.cacheReadTokens;
+    bucket.cacheCreationTokens += usage.cacheCreationTokens;
     bucket.requests += usage.requestCount;
-    bucket.costUsd += calcCost(usage.inputTokens, usage.outputTokens, model);
+    bucket.costUsd += calcCost(usage.inputTokens, usage.outputTokens, usage.cacheCreationTokens, usage.cacheReadTokens, model);
 
     totalInput += usage.inputTokens;
     totalOutput += usage.outputTokens;
     totalCacheRead += usage.cacheReadTokens;
+    totalCacheCreation += usage.cacheCreationTokens;
     totalRequests += usage.requestCount;
   }
 
@@ -116,7 +135,7 @@ export async function aggregateUsage(
 
   // ── Totals ──────────────────────────────────────────────────────────────────
 
-  const totalCost = calcCost(totalInput, totalOutput, model);
+  const totalCost = calcCost(totalInput, totalOutput, totalCacheCreation, totalCacheRead, model);
   const cacheHitRate =
     totalInput > 0 ? Math.round((totalCacheRead / totalInput) * 100) : 0;
 
@@ -124,6 +143,9 @@ export async function aggregateUsage(
 
   // Scan actual unique sessions count from file list
   const uniqueSessions = new Set(sessionFiles.map((f) => f.sessionId)).size;
+
+  const dailyAvgCostUsd = days > 0 ? totalCost / days : 0;
+  const projectedMonthlyUsd = dailyAvgCostUsd * 30;
 
   return {
     periodDays: days,
@@ -134,10 +156,13 @@ export async function aggregateUsage(
     totalInputTokens: totalInput,
     totalOutputTokens: totalOutput,
     totalCacheReadTokens: totalCacheRead,
+    totalCacheCreationTokens: totalCacheCreation,
     cacheHitRate,
     totalCostUsd: totalCost,
     avgCostPerSession: uniqueSessions > 0 ? totalCost / uniqueSessions : 0,
     avgTokensPerRequest: totalRequests > 0 ? Math.round(totalInput / totalRequests) : 0,
+    dailyAvgCostUsd,
+    projectedMonthlyUsd,
     byDay,
     topFiles,
     model,

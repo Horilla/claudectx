@@ -48,9 +48,12 @@ export function formatText(data: ReportData): string {
   lines.push(`  Input tokens:          ${fmtNum(data.totalInputTokens)}`);
   lines.push(`  Output tokens:         ${fmtNum(data.totalOutputTokens)}`);
   lines.push(`  Cache reads:           ${fmtNum(data.totalCacheReadTokens)}  (${data.cacheHitRate}% hit rate)`);
+  lines.push(`  Cache writes:          ${fmtNum(data.totalCacheCreationTokens)}`);
   lines.push(`  Total cost (est.):     ${fmtCost(data.totalCostUsd)}`);
   lines.push(`  Avg cost/session:      ${fmtCost(data.avgCostPerSession)}`);
   lines.push(`  Avg tokens/request:    ${fmtNum(data.avgTokensPerRequest)}`);
+  lines.push(`  Daily avg cost:        ${fmtCost(data.dailyAvgCostUsd)}`);
+  lines.push(`  Projected (30-day):    ${fmtCost(data.projectedMonthlyUsd)}`);
   lines.push(`  Model:                 ${data.model}`);
   lines.push('');
 
@@ -136,9 +139,12 @@ export function formatMarkdown(data: ReportData): string {
   lines.push(`| Input tokens | ${fmtNum(data.totalInputTokens)} |`);
   lines.push(`| Output tokens | ${fmtNum(data.totalOutputTokens)} |`);
   lines.push(`| Cache hit rate | ${data.cacheHitRate}% |`);
+  lines.push(`| Cache writes | ${fmtNum(data.totalCacheCreationTokens)} tokens |`);
   lines.push(`| Total cost (est.) | ${fmtCost(data.totalCostUsd)} |`);
   lines.push(`| Avg cost/session | ${fmtCost(data.avgCostPerSession)} |`);
   lines.push(`| Avg tokens/request | ${fmtNum(data.avgTokensPerRequest)} |`);
+  lines.push(`| Daily avg cost | ${fmtCost(data.dailyAvgCostUsd)} |`);
+  lines.push(`| Projected (30-day) | ${fmtCost(data.projectedMonthlyUsd)} |`);
   lines.push(`| Model | \`${data.model}\` |`);
   lines.push('');
 
