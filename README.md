@@ -85,7 +85,16 @@ claudectx teams export
 ## Installation
 
 ```bash
+# npm (recommended)
 npm install -g claudectx
+
+# Homebrew
+brew tap Horilla/claudectx
+brew install claudectx
+
+# pip (Python projects)
+pip install claudectx-py
+# then: npm install -g claudectx  (the npm package is still required)
 ```
 
 ---
@@ -387,7 +396,7 @@ End of session:                      End of session:
 
 ## Token Savings — Share Your Results
 
-Join the **[Token Savings Hall of Fame](https://github.com/Horilla/claudectx/discussions)** — share your before/after numbers.
+Join the **[Token Savings Hall of Fame](HALL_OF_FAME.md)** — share your before/after numbers and see real results from other developers.
 
 ---
 
