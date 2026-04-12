@@ -14,7 +14,7 @@ import { teamsCommand } from './commands/teams.js';
 import { revertCommand } from './commands/revert.js';
 
 // Version injected at build time by tsup via package.json
-const VERSION = '1.1.3';
+const VERSION = '1.1.4';
 const DESCRIPTION = 'Reduce Claude Code token usage by up to 80%. Context analyzer, auto-optimizer, live dashboard, and smart MCP tools.';
 
 const program = new Command();
