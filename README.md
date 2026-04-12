@@ -80,6 +80,14 @@ claudectx convert --to cursor
 
 # Export your usage data for team-wide cost attribution
 claudectx teams export
+
+# --- Safety: every command that modifies files backs up automatically ---
+
+# See all automatic backups
+claudectx revert --list
+
+# Restore any backup (also backs up current file so you can undo the undo)
+claudectx revert --id <id>
 ```
 
 ## Installation
@@ -163,6 +171,8 @@ What it does:
 - **Cache advisor** — Finds date strings, timestamps, and other patterns that break prompt caching and comments them out.
 - **Hooks installer** — Installs a `PostToolUse` hook in `.claude/settings.local.json` so `claudectx watch` can track files in real time.
 
+> **Safety:** `optimize` backs up your `CLAUDE.md` automatically before any changes. Run `claudectx revert --list` to restore.
+
 ---
 
 ### `claudectx watch` — Live token dashboard
@@ -222,6 +232,8 @@ claudectx compress --api-key <key>        # Provide API key explicitly
 ```
 
 A typical 8,000-token session compresses to ~180 tokens — **97.8% reduction**.
+
+> **Safety:** `compress --prune` asks for confirmation before deleting entries and backs up `MEMORY.md` first. Run `claudectx revert --list` to restore.
 
 ---
 
@@ -338,6 +350,8 @@ claudectx hooks status                                      # Show what's instal
 
 > **Security note:** Hooks that need an API key (`compress`, `warmup`) read `ANTHROPIC_API_KEY` from your environment — no secrets are stored in `.claude/settings.local.json`.
 
+> **Safety:** `hooks remove` asks for confirmation and backs up `.claude/settings.local.json` before removing. Run `claudectx revert --list` to restore.
+
 ---
 
 ### `claudectx convert` — Use your CLAUDE.md everywhere
@@ -352,6 +366,8 @@ claudectx convert --to cursor --dry-run  # Preview without writing
 ```
 
 Each `##` section in CLAUDE.md becomes a separate Cursor `.mdc` file with `alwaysApply: true` frontmatter. `@file` references are stripped for assistants that don't support them.
+
+> **Safety:** `convert` backs up any existing target file before overwriting. Run `claudectx revert --list` to restore.
 
 ---
 
@@ -374,6 +390,52 @@ claudectx teams share --to /shared/reports/
 ```
 
 Output shows per-developer spend, cache hit rate, avg request size, and top shared files. Exports are lightweight JSON — no session content, no prompts, just aggregated token counts.
+
+---
+
+### `claudectx revert` — Restore any backup
+
+Every command that modifies your files creates an automatic backup in `~/.claudectx/backups/` before touching anything. If something goes wrong — or you just changed your mind — you can always recover.
+
+```bash
+claudectx revert --list         # See all backups with timestamps and size
+claudectx revert --id <id>      # Restore a specific backup
+claudectx revert                # Interactive: pick from list
+claudectx revert --file CLAUDE.md  # Filter to backups of one file
+```
+
+Example output of `claudectx revert --list`:
+
+```
+claudectx — Backup History
+══════════════════════════════════════════════════════════════════
+  ID                          File                Command     When
+──────────────────────────────────────────────────────────────────
+  20260412T083012m445-1842...  CLAUDE.md           optimize    2 hours ago
+  20260411T211533m102-9913...  MEMORY.md           compress    1 day ago
+  20260411T094201m773-3371...  copilot-instr...    convert     2 days ago
+```
+
+When you restore, claudectx backs up the **current** file first — so you can undo the undo:
+
+```
+⚠  This will overwrite /path/to/CLAUDE.md with the backup from 2 hours ago.
+   Your current file will be backed up first (so you can undo this).
+   Restore? [y/N]
+```
+
+**Safety:** Backups are kept for the 50 most recent operations, then auto-pruned. They are stored only on your local machine.
+
+**Which commands create backups automatically:**
+
+| Command | What gets backed up |
+|---|---|
+| `optimize --claudemd` | `CLAUDE.md` (before split) |
+| `optimize --cache` | `CLAUDE.md` (before cache-busting lines are commented out) |
+| `convert --to X` | Existing Cursor/Copilot/Windsurf config (if it exists) |
+| `compress --prune` | `MEMORY.md` (before old entries are deleted) |
+| `hooks remove` | `.claude/settings.local.json` (before hook is removed) |
+| `drift --fix` | `CLAUDE.md.bak` (existing behaviour, now also in manifest) |
 
 ---
 
@@ -409,7 +471,7 @@ git clone https://github.com/Horilla/claudectx.git
 cd claudectx
 npm install
 npm run build
-npm test          # 278 tests, should all pass
+npm test          # 293 tests, should all pass
 npm run lint      # 0 errors expected
 ```
 
