@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-04-12
+
+### Security
+- **`warmup --cron`**: API key is no longer embedded in the crontab entry. The cron job now relies on `ANTHROPIC_API_KEY` being set in the cron environment. Cron expressions are validated before installation; the temp-file install pattern (`crontab <tmpfile>`) replaces the shell pipe to prevent injection.
+- **`hooks add`**: `auto-compress` and `session-warmup` hooks no longer require an `apiKey` config field. Both hooks read `ANTHROPIC_API_KEY` from the environment at runtime — no secrets stored in `.claude/settings.local.json`. A warning is displayed whenever any sensitive-looking key (apiKey, token, secret, webhookUrl) is stored.
+- **`hooks readInstalledHooks`**: Malformed `settings.local.json` now triggers a warning and auto-backup (`.json.bak`) instead of silently resetting all settings to `{}`.
+- **`teams share`**: Destination path is now resolved through `fs.realpathSync` and rejected if it points inside a system directory (`/etc`, `/bin`, `/usr`, etc.), preventing symlink traversal attacks.
+
+### Fixed
+- **`drift --fix`**: Rewrites to CLAUDE.md are now atomic (write-to-temp → `fs.rename`) and create a `.bak` backup before any changes. On failure the original is restored.
+- **`convert`**: Files that already exist at the target path now show an `[overwrite]` label in the output instead of being overwritten silently.
+- **`src/index.ts`**: VERSION constant updated to `1.1.1` (was incorrectly pinned to `1.0.0`, causing `claudectx --version` to report the wrong version).
+
 ## [1.1.0] - 2026-04-12
 
 ### Added

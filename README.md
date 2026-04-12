@@ -269,13 +269,16 @@ Output shows per-file token counts, cache hit likelihood (based on your recent r
 Start each session with a cache hit instead of a full miss. Sends a silent priming request to Anthropic so your CLAUDE.md is cached before Claude Code touches it.
 
 ```bash
-claudectx warmup --api-key $ANTHROPIC_API_KEY         # 5-min cache TTL (default)
-claudectx warmup --ttl 60 --api-key $ANTHROPIC_API_KEY  # 60-min extended TTL
-claudectx warmup --cron "0 9 * * 1-5" --api-key ...  # Install as daily cron job
-claudectx warmup --json                               # Output result as JSON
+claudectx warmup --api-key $ANTHROPIC_API_KEY          # 5-min cache TTL (default)
+claudectx warmup --ttl 60 --api-key $ANTHROPIC_API_KEY # 60-min extended TTL (2× write cost)
+claudectx warmup --model sonnet --api-key $ANTHROPIC_API_KEY  # use a specific model
+claudectx warmup --cron "0 9 * * 1-5"                 # Install as weekday 9am cron job
+claudectx warmup --json                                # JSON output for scripting
 ```
 
 Reports tokens warmed, write cost, savings per cache hit, and break-even request count.
+
+> **Note on `--cron`:** The API key is **not** embedded in the cron job. At runtime, the job reads `ANTHROPIC_API_KEY` from your environment. Set it in `~/.profile` or `~/.zshenv` so cron can see it.
 
 ---
 
@@ -286,8 +289,9 @@ Over time CLAUDE.md accumulates dead references and sections nobody reads. `drif
 ```bash
 claudectx drift                      # Scan current project
 claudectx drift --days 14            # Use 14-day read window (default: 30)
-claudectx drift --fix                # Interactively remove flagged lines
+claudectx drift --fix                # Interactively remove flagged lines (creates CLAUDE.md.bak first)
 claudectx drift --json               # JSON output
+claudectx drift --path /other/proj  # Scan a different project directory
 ```
 
 Detects 4 types of drift:
@@ -306,20 +310,24 @@ Detects 4 types of drift:
 Install named, pre-configured hooks beyond the basic read logger.
 
 ```bash
-claudectx hooks list                                  # Show all available hooks
-claudectx hooks add auto-compress --config apiKey=sk-...  # Install a hook
-claudectx hooks remove slack-digest                   # Remove an installed hook
-claudectx hooks status                                # Show what's installed
+claudectx hooks list                                        # Show all available hooks
+claudectx hooks add auto-compress                           # Install with default threshold (50k tokens)
+claudectx hooks add auto-compress --config threshold=30000  # Custom token threshold
+claudectx hooks add slack-digest --config webhookUrl=https://hooks.slack.com/...
+claudectx hooks remove slack-digest                         # Remove an installed hook
+claudectx hooks status                                      # Show what's installed
 ```
 
 **Built-in hooks:**
 
-| Hook | Trigger | What it does |
-|---|---|---|
-| `auto-compress` | PostToolUse (Read) | Runs `claudectx compress` after each session |
-| `daily-budget` | PreToolUse | Checks token budget before each tool call |
-| `slack-digest` | Stop | Posts session report to a Slack webhook |
-| `session-warmup` | PostToolUse (Read) | Re-warms the cache after each read |
+| Hook | Trigger | Config | What it does |
+|---|---|---|---|
+| `auto-compress` | PostToolUse (Read) | `threshold` (default: 50000) | Runs `claudectx compress` after each session |
+| `daily-budget` | PreToolUse | _(none)_ | Reports today's spend before each tool call |
+| `slack-digest` | Stop | `webhookUrl` (required) | Posts session report to a Slack webhook |
+| `session-warmup` | PostToolUse (Read) | _(none)_ | Re-warms the cache; reads `ANTHROPIC_API_KEY` from env |
+
+> **Security note:** Hooks that need an API key (`compress`, `warmup`) read `ANTHROPIC_API_KEY` from your environment — no secrets are stored in `.claude/settings.local.json`.
 
 ---
 
@@ -344,16 +352,16 @@ See where the money goes across your whole team — without sharing session cont
 
 ```bash
 # Step 1: each developer runs this on their own machine
-claudectx teams export
+claudectx teams export                           # Default: last 30 days, sonnet pricing
+claudectx teams export --days 7 --model haiku   # Custom window and model
 
 # Step 2: collect the JSON files in a shared directory, then aggregate
 claudectx teams aggregate --dir ./reports/
+claudectx teams aggregate --dir ./reports/ --anonymize  # Replace names with Dev 1, Dev 2...
+claudectx teams aggregate --dir ./reports/ --json       # Machine-readable JSON
 
 # Optional: copy your export to a shared location
 claudectx teams share --to /shared/reports/
-
-# Anonymize for review
-claudectx teams aggregate --dir ./reports/ --anonymize
 ```
 
 Output shows per-developer spend, cache hit rate, avg request size, and top shared files. Exports are lightweight JSON — no session content, no prompts, just aggregated token counts.
