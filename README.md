@@ -28,6 +28,10 @@ A typical Claude Code session costs **$2–$15 in tokens**. Most of it is wasted
 | Full file reads for small questions | 70% overhead from unnecessary lines | `claudectx mcp` |
 | No prompt caching configured | Paying 10× for static context | `claudectx optimize --cache` |
 | No cross-session memory | Repeating the same context every session | `claudectx compress` |
+| Dead `@refs` and stale sections in CLAUDE.md | Silent token waste on every request | `claudectx drift` |
+| Unknown cost before running a big task | Surprise bills after the fact | `claudectx budget` |
+| Cache cold at session start | First request always a full miss | `claudectx warmup` |
+| No visibility into team-wide spend | Can't attribute cost across devs | `claudectx teams` |
 
 ### Where your tokens actually go
 
@@ -59,6 +63,23 @@ claudectx compress
 
 # Review your token spend for the last 7 days
 claudectx report
+
+# --- v1.1.0 additions ---
+
+# Know the cost before you start a task
+claudectx budget "src/**/*.ts" "tests/**/*.ts"
+
+# Pre-warm your prompt cache so the first request is free
+claudectx warmup --api-key $ANTHROPIC_API_KEY
+
+# Find dead references and stale sections in CLAUDE.md
+claudectx drift
+
+# Convert CLAUDE.md to Cursor / Copilot / Windsurf format
+claudectx convert --to cursor
+
+# Export your usage data for team-wide cost attribution
+claudectx teams export
 ```
 
 ## Installation
@@ -229,6 +250,116 @@ DAILY USAGE
 
 ---
 
+### `claudectx budget` — Know the cost before you start
+
+Before running a big task, see exactly which files will be read, how many tokens they'll consume, and what it'll cost.
+
+```bash
+claudectx budget "src/**/*.ts"                        # Estimate all TypeScript files
+claudectx budget "**/*.py" --threshold 20000          # Warn if total exceeds 20K tokens
+claudectx budget "src/**" --model opus --json         # JSON output for scripting
+```
+
+Output shows per-file token counts, cache hit likelihood (based on your recent reads), total cost estimate, and `.claudeignore` recommendations for files that are large but rarely useful.
+
+---
+
+### `claudectx warmup` — Pre-warm the prompt cache
+
+Start each session with a cache hit instead of a full miss. Sends a silent priming request to Anthropic so your CLAUDE.md is cached before Claude Code touches it.
+
+```bash
+claudectx warmup --api-key $ANTHROPIC_API_KEY         # 5-min cache TTL (default)
+claudectx warmup --ttl 60 --api-key $ANTHROPIC_API_KEY  # 60-min extended TTL
+claudectx warmup --cron "0 9 * * 1-5" --api-key ...  # Install as daily cron job
+claudectx warmup --json                               # Output result as JSON
+```
+
+Reports tokens warmed, write cost, savings per cache hit, and break-even request count.
+
+---
+
+### `claudectx drift` — CLAUDE.md stays fresh, not stale
+
+Over time CLAUDE.md accumulates dead references and sections nobody reads. `drift` finds them.
+
+```bash
+claudectx drift                      # Scan current project
+claudectx drift --days 14            # Use 14-day read window (default: 30)
+claudectx drift --fix                # Interactively remove flagged lines
+claudectx drift --json               # JSON output
+```
+
+Detects 4 types of drift:
+
+| Type | Example |
+|---|---|
+| **Dead `@ref`** | `@src/old-service.ts` — file deleted |
+| **Git-deleted mention** | `legacy-auth.py` appears in prose but was removed in git |
+| **Stale section** | `## Android Setup` — zero reads in 30 days |
+| **Dead inline path** | `src/utils/helper.py` mentioned in text, no longer exists |
+
+---
+
+### `claudectx hooks` — Hook marketplace
+
+Install named, pre-configured hooks beyond the basic read logger.
+
+```bash
+claudectx hooks list                                  # Show all available hooks
+claudectx hooks add auto-compress --config apiKey=sk-...  # Install a hook
+claudectx hooks remove slack-digest                   # Remove an installed hook
+claudectx hooks status                                # Show what's installed
+```
+
+**Built-in hooks:**
+
+| Hook | Trigger | What it does |
+|---|---|---|
+| `auto-compress` | PostToolUse (Read) | Runs `claudectx compress` after each session |
+| `daily-budget` | PreToolUse | Checks token budget before each tool call |
+| `slack-digest` | Stop | Posts session report to a Slack webhook |
+| `session-warmup` | PostToolUse (Read) | Re-warms the cache after each read |
+
+---
+
+### `claudectx convert` — Use your CLAUDE.md everywhere
+
+You wrote great instructions for Claude. Use them with Cursor, Copilot, or Windsurf too.
+
+```bash
+claudectx convert --to cursor         # → .cursor/rules/<section>.mdc (one per ## section)
+claudectx convert --to copilot        # → .github/copilot-instructions.md
+claudectx convert --to windsurf       # → .windsurfrules
+claudectx convert --to cursor --dry-run  # Preview without writing
+```
+
+Each `##` section in CLAUDE.md becomes a separate Cursor `.mdc` file with `alwaysApply: true` frontmatter. `@file` references are stripped for assistants that don't support them.
+
+---
+
+### `claudectx teams` — Multi-developer cost attribution
+
+See where the money goes across your whole team — without sharing session content.
+
+```bash
+# Step 1: each developer runs this on their own machine
+claudectx teams export
+
+# Step 2: collect the JSON files in a shared directory, then aggregate
+claudectx teams aggregate --dir ./reports/
+
+# Optional: copy your export to a shared location
+claudectx teams share --to /shared/reports/
+
+# Anonymize for review
+claudectx teams aggregate --dir ./reports/ --anonymize
+```
+
+Output shows per-developer spend, cache hit rate, avg request size, and top shared files. Exports are lightweight JSON — no session content, no prompts, just aggregated token counts.
+
+---
+
 ## How it all fits together
 
 ```
@@ -261,7 +392,7 @@ git clone https://github.com/Horilla/claudectx.git
 cd claudectx
 npm install
 npm run build
-npm test          # 199 tests, should all pass
+npm test          # 278 tests, should all pass
 npm run lint      # 0 errors expected
 ```
 

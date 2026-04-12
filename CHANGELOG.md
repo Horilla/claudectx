@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-04-12
+
+### Added
+- `claudectx budget <globs>` — estimate token cost before running a task
+  - Resolves file globs, counts tokens per file, scores cache hit likelihood (high/medium/low)
+  - Weighted cache hit potential (0–100%) based on recent reads.jsonl history
+  - `.claudeignore` recommendations for large files not yet excluded
+  - `--threshold N`, `--model`, `--json` flags
+- `claudectx warmup` — pre-warm the Anthropic prompt cache with CLAUDE.md
+  - Sends a silent priming request so the first real working request gets a cache hit
+  - Calculates write cost, savings per hit, and break-even request count
+  - `--ttl 5|60` (60-min extended TTL at 2× write cost), `--cron <expr>` to install as cron job
+  - Injectable Anthropic client for testability
+- `claudectx drift` — detect stale references and dead sections in CLAUDE.md
+  - Dead `@file` references that no longer exist on disk
+  - File paths mentioned in git-deleted files (via `git log --diff-filter=D`)
+  - `## Sections` with zero matching file reads in the last N days
+  - Dead inline paths in prose (src/old/file.py that no longer exist)
+  - `--fix` flag: interactive checkbox to remove flagged lines, rewrites CLAUDE.md
+  - `--days N`, `--json` flags; degrades gracefully in non-git directories
+- `claudectx hooks list|add|remove|status` — hook marketplace
+  - 4 built-in hooks: `auto-compress`, `daily-budget`, `slack-digest`, `session-warmup`
+  - `{{config.key}}` interpolation for per-install configuration
+  - `--config key=value` pairs for non-interactive installs
+  - Interactive prompts for required config fields not provided via `--config`
+  - Hooks written to `.claude/settings.json` alongside existing entries
+- `claudectx convert --to cursor|copilot|windsurf` — translate CLAUDE.md to other AI assistant formats
+  - Cursor: splits `##` sections into `.cursor/rules/<slug>.mdc` with YAML frontmatter (`alwaysApply: true`)
+  - Copilot: strips `@file` references, writes to `.github/copilot-instructions.md`
+  - Windsurf: same cleanup, writes to `.windsurfrules`
+  - `--dry-run` flag to preview without writing
+- `claudectx teams export|aggregate|share` — multi-developer cost attribution
+  - `export`: generates `~/.claudectx/team-export-{date}.json` from local session data
+  - `aggregate --dir ./reports/`: merges multiple exports into a team cost table
+  - `share --to <path>`: copies latest export to a shared location
+  - `--anonymize`: replaces identities with "Dev 1", "Dev 2", etc.
+  - Developer identity: `git config user.email` with `os.hostname()` fallback
+
+### Changed
+- `src/shared/types.ts`: extended `WasteCode` union with `DEAD_REFERENCE`, `STALE_SECTION`, `GIT_DELETED`, `DEAD_INLINE_PATH`; added `TeamIdentity` and `InstalledHookMeta` interfaces
+- `src/optimizer/hooks-installer.ts`: exported `writeHooksSettings()` for use by the hooks marketplace
+- Test suite: 199 → 278 tests (79 new tests across 7 new test files)
+
 ## [1.0.0] - 2026-04-11
 
 ### Added
