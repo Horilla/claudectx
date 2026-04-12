@@ -117,7 +117,28 @@ async function applyFix(claudeMdPath: string, issues: DriftIssue[]): Promise<voi
   const lines = content.split('\n');
   const lineSet = new Set(selectedLines.map((l) => l - 1)); // 0-indexed
   const newLines = lines.filter((_, i) => !lineSet.has(i));
+  const newContent = newLines.join('\n');
 
-  fs.writeFileSync(claudeMdPath, newLines.join('\n'), 'utf-8');
-  process.stdout.write(`\n  ✓ Removed ${selectedLines.length} line(s) from ${claudeMdPath}\n\n`);
+  // Backup first
+  const backupPath = `${claudeMdPath}.bak`;
+  fs.writeFileSync(backupPath, content, 'utf-8');
+
+  // Atomic write: write to temp file beside the target, then rename
+  const os = await import('os');
+  const tmpPath = `${claudeMdPath}.tmp-${Date.now()}`;
+  try {
+    fs.writeFileSync(tmpPath, newContent, 'utf-8');
+    fs.renameSync(tmpPath, claudeMdPath);
+  } catch (err) {
+    // Roll back: restore backup
+    try { fs.copyFileSync(backupPath, claudeMdPath); } catch { /* already failed */ }
+    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    process.stderr.write(`Error writing CLAUDE.md: ${err instanceof Error ? err.message : String(err)}\n`);
+    process.exit(1);
+  }
+
+  process.stdout.write(`\n  ✓ Removed ${selectedLines.length} line(s) from ${path.basename(claudeMdPath)}\n`);
+  process.stdout.write(`  ✓ Backup saved to ${backupPath}\n\n`);
+  // Suppress unused import warning
+  void os;
 }

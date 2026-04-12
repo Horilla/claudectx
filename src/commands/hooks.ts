@@ -17,12 +17,20 @@ type SettingsJson = {
   [key: string]: unknown;
 };
 
-/** Read current settings.local.json, returning {} if missing/invalid */
+/** Read current settings.local.json, returning {} if missing. Warns if file exists but is malformed. */
 export function readInstalledHooks(projectRoot: string): SettingsJson {
   const settingsPath = path.join(projectRoot, '.claude', 'settings.local.json');
+  if (!fs.existsSync(settingsPath)) return {};
   try {
     return JSON.parse(fs.readFileSync(settingsPath, 'utf-8')) as SettingsJson;
   } catch {
+    process.stderr.write(
+      `Warning: ${settingsPath} exists but contains invalid JSON. Existing settings will be preserved as a backup.\n`,
+    );
+    // Back up the malformed file before we risk overwriting it
+    try {
+      fs.copyFileSync(settingsPath, `${settingsPath}.bak`);
+    } catch { /* ignore backup failure */ }
     return {};
   }
 }
@@ -127,6 +135,17 @@ export async function hooksAdd(
   if (command.includes('{{config.')) {
     process.stderr.write(`Error: unresolved config placeholders in command: ${command}\n`);
     process.exit(1);
+  }
+
+  // Warn if any config value looks like an API key stored in plain text
+  const sensitiveKeys = Object.keys(config).filter((k) =>
+    /key|token|secret|password|webhook/i.test(k),
+  );
+  if (sensitiveKeys.length > 0) {
+    process.stderr.write(
+      `Warning: config field(s) [${sensitiveKeys.join(', ')}] will be stored in plain text in\n` +
+        `  .claude/settings.local.json — ensure this file is in your .gitignore.\n`,
+    );
   }
 
   // Build entry and merge into settings

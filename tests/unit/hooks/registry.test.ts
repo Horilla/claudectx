@@ -70,12 +70,14 @@ describe('buildHookEntry', () => {
     expect(Array.isArray(entry.hooks)).toBe(true);
   });
 
-  it('interpolates config values into the command', () => {
+  it('produces a command for session-warmup that reads API key from env (no key in command)', () => {
     const def = getHook('session-warmup')!;
-    const entry = buildHookEntry(def, { apiKey: 'sk-mykey' });
+    const entry = buildHookEntry(def, {});
 
     const hooks = entry.hooks as Array<{ command: string }>;
-    expect(hooks[0].command).toContain('sk-mykey');
+    // API key must NOT be embedded in the stored command — it is read from ANTHROPIC_API_KEY at runtime
+    expect(hooks[0].command).toBe('claudectx warmup');
+    expect(hooks[0].command).not.toContain('--api-key');
   });
 });
 

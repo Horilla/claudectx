@@ -23,10 +23,10 @@ export const HOOK_REGISTRY: HookDefinition[] = [
     description: 'Compress session when token count exceeds threshold',
     triggerEvent: 'PostToolUse',
     matcher: 'Read',
-    commandTemplate: 'claudectx compress --auto --api-key {{config.apiKey}}',
+    // API key is read from ANTHROPIC_API_KEY env var — never stored in settings.json
+    commandTemplate: 'claudectx compress --auto',
     configSchema: {
       threshold: { type: 'number', default: 50000, description: 'Token threshold to trigger compression' },
-      apiKey: { type: 'string', description: 'Anthropic API key for AI summarization', required: true },
     },
     category: 'compression',
   },
@@ -60,10 +60,9 @@ export const HOOK_REGISTRY: HookDefinition[] = [
     description: 'Pre-warm the Anthropic prompt cache on each session start',
     triggerEvent: 'PostToolUse',
     matcher: 'Read',
-    commandTemplate: 'claudectx warmup --api-key {{config.apiKey}}',
-    configSchema: {
-      apiKey: { type: 'string', description: 'Anthropic API key', required: true },
-    },
+    // API key is read from ANTHROPIC_API_KEY env var — never stored in settings.json
+    commandTemplate: 'claudectx warmup',
+    configSchema: {},
     category: 'warmup',
   },
 ];

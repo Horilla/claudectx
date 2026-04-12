@@ -127,7 +127,9 @@ export async function convertCommand(options: ConvertOptions): Promise<void> {
 
     for (const file of files) {
       const filePath = path.join(targetDir, file.filename);
-      process.stdout.write(`  ${options.dryRun ? '[dry-run] ' : ''}→ .cursor/rules/${file.filename}\n`);
+      const exists = fs.existsSync(filePath);
+      const prefix = options.dryRun ? '[dry-run] ' : exists ? '[overwrite] ' : '';
+      process.stdout.write(`  ${prefix}→ .cursor/rules/${file.filename}\n`);
       if (!options.dryRun) {
         fs.mkdirSync(targetDir, { recursive: true });
         fs.writeFileSync(filePath, file.content, 'utf-8');
@@ -138,7 +140,8 @@ export async function convertCommand(options: ConvertOptions): Promise<void> {
   } else if (to === 'copilot') {
     const converted = claudeMdToCopilot(content);
     const targetPath = path.join(projectRoot, '.github', 'copilot-instructions.md');
-    process.stdout.write(`\nConverting CLAUDE.md → .github/copilot-instructions.md\n`);
+    const exists = fs.existsSync(targetPath);
+    process.stdout.write(`\nConverting CLAUDE.md → .github/copilot-instructions.md${exists ? ' [overwrite]' : ''}\n`);
     if (!options.dryRun) {
       fs.mkdirSync(path.dirname(targetPath), { recursive: true });
       fs.writeFileSync(targetPath, converted, 'utf-8');
@@ -150,7 +153,8 @@ export async function convertCommand(options: ConvertOptions): Promise<void> {
   } else if (to === 'windsurf') {
     const converted = claudeMdToWindsurf(content);
     const targetPath = path.join(projectRoot, '.windsurfrules');
-    process.stdout.write(`\nConverting CLAUDE.md → .windsurfrules\n`);
+    const exists = fs.existsSync(targetPath);
+    process.stdout.write(`\nConverting CLAUDE.md → .windsurfrules${exists ? ' [overwrite]' : ''}\n`);
     if (!options.dryRun) {
       fs.writeFileSync(targetPath, converted, 'utf-8');
       process.stdout.write(`  ✓ Written to ${targetPath}\n\n`);

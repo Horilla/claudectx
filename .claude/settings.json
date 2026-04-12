@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "claudectx": {
+      "command": "claudectx",
+      "args": [
+        "mcp"
+      ],
+      "type": "stdio"
+    }
+  }
+}

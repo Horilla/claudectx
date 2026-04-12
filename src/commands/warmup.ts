@@ -114,32 +114,69 @@ export async function executeWarmup(
   };
 }
 
+/** Validate a cron expression (5 or 6 space-separated fields, each alphanumeric/*, /-, ,) */
+function isValidCronExpr(expr: string): boolean {
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length < 5 || parts.length > 6) return false;
+  return parts.every((p) => /^[0-9*,/\-]+$/.test(p));  // eslint-disable-line no-useless-escape
+}
+
 /**
  * Install a cron job that runs `claudectx warmup` on a schedule.
+ * The API key is NOT embedded in the crontab — the job reads ANTHROPIC_API_KEY from env.
  */
-async function installCron(cronExpr: string, apiKey: string): Promise<void> {
+async function installCron(cronExpr: string): Promise<void> {
+  if (!isValidCronExpr(cronExpr)) {
+    process.stderr.write(
+      `Error: invalid cron expression "${cronExpr}".\n` +
+        '  Example: "0 9 * * 1-5" (weekdays at 9am)\n',
+    );
+    process.exit(1);
+  }
+
   const { execSync } = await import('child_process');
-  const command = `claudectx warmup --api-key ${apiKey}`;
+  // Never embed the API key — require it via environment variable at runtime
+  const command = `claudectx warmup`;
   const cronLine = `${cronExpr} ${command}`;
+  const marker = '# claudectx warmup';
 
   try {
     let existing = '';
     try {
-      existing = execSync('crontab -l 2>/dev/null', { encoding: 'utf-8' });
+      existing = execSync('crontab -l', {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
     } catch {
       existing = '';
     }
 
-    if (existing.includes('claudectx warmup')) {
-      process.stdout.write('Cron job already installed for claudectx warmup.\n');
+    if (existing.includes(marker)) {
+      process.stdout.write('  Cron job already installed for claudectx warmup.\n');
       return;
     }
 
-    const newCrontab = existing.trimEnd() + '\n' + cronLine + '\n';
-    execSync(`echo ${JSON.stringify(newCrontab)} | crontab -`);
-    process.stdout.write(`✓ Cron job installed: ${cronLine}\n`);
+    const newCrontab = existing.trimEnd() + `\n${marker}\n${cronLine}\n`;
+
+    // Write to temp file then install — avoids shell injection via echo
+    const { writeFileSync, unlinkSync } = await import('fs');
+    const { tmpdir } = await import('os');
+    const { join } = await import('path');
+    const tmpFile = join(tmpdir(), `claudectx-cron-${Date.now()}.txt`);
+    try {
+      writeFileSync(tmpFile, newCrontab, 'utf-8');
+      execSync(`crontab ${tmpFile}`, { stdio: ['pipe', 'pipe', 'pipe'] });
+    } finally {
+      try { unlinkSync(tmpFile); } catch { /* ignore */ }
+    }
+
+    process.stdout.write(`  ✓ Cron job installed: ${cronLine}\n`);
+    process.stdout.write('  Note: Set ANTHROPIC_API_KEY in your cron environment (e.g. via ~/.profile).\n');
   } catch {
-    process.stdout.write(`Could not install cron automatically. Add manually:\n  ${cronLine}\n`);
+    process.stdout.write(
+      `  Could not install cron automatically. Add this line manually with "crontab -e":\n` +
+        `  ANTHROPIC_API_KEY=<your-key>\n  ${cronLine}\n`,
+    );
   }
 }
 
@@ -209,6 +246,6 @@ export async function warmupCommand(options: WarmupOptions): Promise<void> {
   process.stdout.write('\n');
 
   if (options.cron) {
-    await installCron(options.cron, apiKey);
+    await installCron(options.cron);
   }
 }

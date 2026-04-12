@@ -123,7 +123,32 @@ export async function teamsShare(options: TeamsOptions): Promise<void> {
 
   const latest = exportFiles[0];
   const src = path.join(storeDir, latest);
-  const destPath = fs.statSync(dest).isDirectory() ? path.join(dest, latest) : dest;
+
+  // Resolve destination: if it's a directory, place the file inside it
+  let destPath: string;
+  try {
+    const stat = fs.statSync(dest);
+    destPath = stat.isDirectory() ? path.join(dest, latest) : dest;
+  } catch {
+    // Destination doesn't exist yet — treat it as a direct file path
+    destPath = dest;
+  }
+
+  // Resolve symlinks on the destination directory to prevent traversal to sensitive paths
+  const destDir = path.dirname(path.resolve(destPath));
+  let resolvedDir: string;
+  try {
+    resolvedDir = fs.realpathSync(destDir);
+  } catch {
+    resolvedDir = destDir; // directory doesn't exist yet — will be created by the copy
+  }
+
+  // Reject if destination resolves to a system directory
+  const systemDirs = ['/etc', '/bin', '/sbin', '/usr', '/var', '/proc', '/sys'];
+  if (systemDirs.some((d) => resolvedDir === d || resolvedDir.startsWith(d + '/'))) {
+    process.stderr.write(`Error: destination path resolves to a system directory (${resolvedDir}). Aborting.\n`);
+    process.exit(1);
+  }
 
   fs.copyFileSync(src, destPath);
   process.stdout.write(`  ✓ Copied ${latest} → ${destPath}\n\n`);
