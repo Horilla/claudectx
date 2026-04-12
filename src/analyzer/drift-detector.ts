@@ -88,13 +88,38 @@ export async function findGitDeletedMentions(
 
   if (deletedFiles.size === 0) return [];
 
+  // Pre-compute searchable terms for each deleted file.
+  // Filter out very short names (< 4 chars) to avoid false positives where
+  // common words like "he", "ai", "io" match unrelated prose in CLAUDE.md.
+  const deletedTerms: Array<{ basename: string; fullPath: string }> = [];
+  for (const deleted of deletedFiles) {
+    const stem = path.basename(deleted, path.extname(deleted)); // strip extension for length check
+    const basenameWithExt = path.basename(deleted);
+    if (stem.length < 4) continue; // too short — too many false positives
+    deletedTerms.push({ basename: basenameWithExt, fullPath: deleted });
+  }
+
+  if (deletedTerms.length === 0) return [];
+
   const lines = content.split('\n');
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    for (const deleted of deletedFiles) {
-      // Check if this deleted file name appears in the line
-      const basename = path.basename(deleted);
-      if (line.includes(basename) || line.includes(deleted)) {
+    const lineLower = line.toLowerCase();
+
+    for (const { basename, fullPath } of deletedTerms) {
+      // Match the full path OR the basename-with-extension as a word boundary
+      // Use word boundary check: character before/after must be non-alphanumeric
+      const matchesFullPath = lineLower.includes(fullPath.toLowerCase());
+      const basenameLower = basename.toLowerCase();
+      const idx = lineLower.indexOf(basenameLower);
+      const matchesBasename =
+        idx !== -1 &&
+        // Check left boundary: start of string, space, slash, quote, backtick, or `@`
+        (idx === 0 || /[\s/`'"@(]/.test(line[idx - 1])) &&
+        // Check right boundary: end of string, space, punctuation, or extension dot
+        (idx + basenameLower.length >= line.length || /[\s/`'",.):@]/.test(line[idx + basenameLower.length]));
+
+      if (matchesFullPath || matchesBasename) {
         issues.push({
           type: 'git-deleted',
           line: i + 1,

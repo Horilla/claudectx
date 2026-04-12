@@ -136,8 +136,10 @@ export async function aggregateUsage(
   // ── Totals ──────────────────────────────────────────────────────────────────
 
   const totalCost = calcCost(totalInput, totalOutput, totalCacheCreation, totalCacheRead, model);
-  const cacheHitRate =
-    totalInput > 0 ? Math.round((totalCacheRead / totalInput) * 100) : 0;
+  // Cache hit rate = cache reads / (new input + cache reads)
+  // Denominator includes both so the result is a true percentage of total context served from cache.
+  const totalContext = totalInput + totalCacheRead;
+  const cacheHitRate = totalContext > 0 ? Math.round((totalCacheRead / totalContext) * 100) : 0;
 
   const byDay = [...bucketMap.values()].sort((a, b) => a.date.localeCompare(b.date));
 

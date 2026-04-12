@@ -146,7 +146,9 @@ export async function buildTeamExport(
     .map((s) => ({ filePath: s.filePath, readCount: s.readCount }));
 
   const totalCostUsd = calcCost(totalInput, totalOutput, 0, totalCacheRead, model);
-  const cacheHitRate = totalInput > 0 ? Math.round((totalCacheRead / totalInput) * 100) : 0;
+  // Cache hit rate = cache reads / (new input + cache reads)
+  const totalContext = totalInput + totalCacheRead;
+  const cacheHitRate = totalContext > 0 ? Math.round((totalCacheRead / totalContext) * 100) : 0;
   const uniqueSessions = new Set(sessionFiles.map((f) => f.sessionId)).size;
 
   const developer: DeveloperRecord = {
