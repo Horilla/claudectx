@@ -1,0 +1,41 @@
+{
+  "projectPath": "/home/runner/work/claudectx/claudectx",
+  "timestamp": "2026-04-13T10:04:45.445Z",
+  "model": "claude-sonnet-4-6",
+  "components": [
+    {
+      "name": "System prompt (built-in)",
+      "type": "system-prompt",
+      "tokenCount": 4200,
+      "estimatedCostPerRequest": 0.0126,
+      "warnings": []
+    },
+    {
+      "name": "Tool definitions (built-in)",
+      "type": "tool-definitions",
+      "tokenCount": 2100,
+      "estimatedCostPerRequest": 0.0063,
+      "warnings": []
+    },
+    {
+      "name": "MCP schemas (3 tools)",
+      "type": "mcp-schemas",
+      "tokenCount": 540,
+      "estimatedCostPerRequest": 0.00162,
+      "warnings": []
+    }
+  ],
+  "totalTokensPerRequest": 6840,
+  "estimatedCostPerSession": 1.2312,
+  "warnings": [
+    {
+      "code": "MISSING_IGNOREFILE",
+      "severity": "warning",
+      "message": "No .claudeignore file found — Claude may read node_modules, .git, dist/ etc.",
+      "suggestion": "Run `claudectx optimize --ignorefile` to generate one",
+      "estimatedSavings": 0
+    }
+  ],
+  "optimizedTokensPerRequest": 6840,
+  "potentialSavingsPercent": 0
+}
