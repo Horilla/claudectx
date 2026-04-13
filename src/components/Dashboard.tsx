@@ -178,7 +178,10 @@ export function Dashboard({
     sessionFile: null,
     lastUpdated: new Date(),
     tickCount: 0,
+    isRefreshing: false,
   });
+
+  const [lastManualRefresh, setLastManualRefresh] = useState<Date | null>(null);
 
   const refresh = useCallback(() => {
     const events = readAllEvents();
@@ -200,6 +203,7 @@ export function Dashboard({
 
     usagePromise.then((usage) => {
       setState((prev) => ({
+        ...prev,
         fileStats,
         usage,
         sessionFile,
@@ -208,6 +212,12 @@ export function Dashboard({
       }));
     }).catch(() => { /* ignore */ });
   }, [sessionId]);
+
+  const manualRefresh = useCallback(() => {
+    setLastManualRefresh(new Date());
+    refresh();
+    setTimeout(() => setLastManualRefresh(null), 1000);
+  }, [refresh]);
 
   useEffect(() => {
     refresh();
@@ -249,9 +259,11 @@ export function Dashboard({
   useInput((input, key) => {
     if (input === 'q' || input === 'Q' || key.escape) {
       exit();
+      // Ensure the process exits even if there's an event loop issue
+      setTimeout(() => process.exit(0), 500).unref();
     }
     if (input === 'r' || input === 'R') {
-      refresh();
+      manualRefresh();
     }
   });
 
@@ -296,6 +308,9 @@ export function Dashboard({
         <Text dimColor>{' to quit  •  '}</Text>
         <Text bold>r</Text>
         <Text dimColor>{' to refresh  •  Polls every 2s'}</Text>
+        {lastManualRefresh && (
+          <Text color="cyan">{'  (Refreshing…)'}</Text>
+        )}
       </Box>
     </Box>
   );

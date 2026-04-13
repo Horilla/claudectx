@@ -1,4 +1,6 @@
-import { get_encoding } from 'js-tiktoken';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { get_encoding } = require('js-tiktoken');
 
 // cl100k_base is the closest available encoding to Claude's tokenizer
 // Accuracy: within 2-5% of actual Claude token counts

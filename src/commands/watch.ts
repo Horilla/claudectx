@@ -52,12 +52,12 @@ export async function watchCommand(options: WatchOptions): Promise<void> {
   const React = (await import('react')).default;
   const { Dashboard } = await import('../components/Dashboard.js');
 
-  render(
+  await render(
     React.createElement(Dashboard, {
       model,
       sessionId: options.session,
     })
-  );
+  ).waitUntilExit();
 }
 
 /** Read stdin, parse JSON hook payload, log the file path. */
