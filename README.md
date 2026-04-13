@@ -2,6 +2,7 @@
   <h1>claudectx</h1>
   <p><strong>Reduce Claude Code token usage by up to 80% — with zero workflow changes.</strong></p>
 
+  <a href="https://claudectx.horilla.com"><img src="https://img.shields.io/badge/website-claudectx.horilla.com-e54f38?style=flat-square" alt="Website" /></a>
   <a href="https://npmjs.com/package/claudectx"><img src="https://img.shields.io/npm/v/claudectx.svg?style=flat-square" alt="npm version" /></a>
   <a href="https://github.com/Horilla/claudectx/stargazers"><img src="https://img.shields.io/github/stars/Horilla/claudectx?style=flat-square" alt="GitHub Stars" /></a>
   <img src="https://img.shields.io/npm/dm/claudectx.svg?style=flat-square" alt="npm downloads" />
