@@ -1,0 +1,92 @@
+{
+  "periodDays": 7,
+  "startDate": "2026-04-20",
+  "endDate": "2026-04-27",
+  "totalSessions": 0,
+  "totalRequests": 0,
+  "totalInputTokens": 0,
+  "totalOutputTokens": 0,
+  "totalCacheReadTokens": 0,
+  "totalCacheCreationTokens": 0,
+  "cacheHitRate": 0,
+  "totalCostUsd": 0,
+  "avgCostPerSession": 0,
+  "avgTokensPerRequest": 0,
+  "dailyAvgCostUsd": 0,
+  "projectedMonthlyUsd": 0,
+  "byDay": [
+    {
+      "date": "2026-04-21",
+      "sessions": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheCreationTokens": 0,
+      "requests": 0,
+      "costUsd": 0
+    },
+    {
+      "date": "2026-04-22",
+      "sessions": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheCreationTokens": 0,
+      "requests": 0,
+      "costUsd": 0
+    },
+    {
+      "date": "2026-04-23",
+      "sessions": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheCreationTokens": 0,
+      "requests": 0,
+      "costUsd": 0
+    },
+    {
+      "date": "2026-04-24",
+      "sessions": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheCreationTokens": 0,
+      "requests": 0,
+      "costUsd": 0
+    },
+    {
+      "date": "2026-04-25",
+      "sessions": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheCreationTokens": 0,
+      "requests": 0,
+      "costUsd": 0
+    },
+    {
+      "date": "2026-04-26",
+      "sessions": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheCreationTokens": 0,
+      "requests": 0,
+      "costUsd": 0
+    },
+    {
+      "date": "2026-04-27",
+      "sessions": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "cacheReadTokens": 0,
+      "cacheCreationTokens": 0,
+      "requests": 0,
+      "costUsd": 0
+    }
+  ],
+  "topFiles": [],
+  "model": "claude-sonnet-4-6",
+  "generatedAt": "2026-04-27T10:16:13.651Z"
+}
